@@ -12,7 +12,17 @@ Please check out the project for more information: [[Project page]](https://em-y
 
 CASSIE is a research code. Therefore, expect to discover some bugs, compatibility and performance issues. If you are interested in using the project and need help setting up or adapting it, you can [contact us](https://github.com/V-Sekai/cassie/issues).
 
-If this is useful for your research, please [cite us](#citing-this-project).
+## Attribution
+
+```latex
+@InProceedings{YASBS21,
+  author       = "Yu, Emilie and Arora, Rahul and Stanko, Tibor and Bærentzen, J. Andreas and Singh, Karan and Bousseau, Adrien",
+  title        = "CASSIE: Curve and Surface Sketching in Immersive Environments",
+  booktitle    = "ACM Conference on Human Factors in Computing Systems (CHI)",
+  year         = "2021",
+  url          = "http://www-sop.inria.fr/reves/Basilic/2021/YASBS21"
+}
+```
 
 ## Installation
 
@@ -96,15 +106,3 @@ You can choose which file formats you wish to have at export by editing the scri
 ## License
 
 The code in this repository, except for the external dependencies, is provided under the MIT License. The external dependencies are provided under their respective licenses.
-
-## Citing this project
-
-```latex
-@InProceedings{YASBS21,
-  author       = "Yu, Emilie and Arora, Rahul and Stanko, Tibor and Bærentzen, J. Andreas and Singh, Karan and Bousseau, Adrien",
-  title        = "CASSIE: Curve and Surface Sketching in Immersive Environments",
-  booktitle    = "ACM Conference on Human Factors in Computing Systems (CHI)",
-  year         = "2021",
-  url          = "http://www-sop.inria.fr/reves/Basilic/2021/YASBS21"
-}
-```
