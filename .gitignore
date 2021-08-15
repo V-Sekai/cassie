@@ -74,3 +74,5 @@ Recordings/
 unityProject.vrmanifest
 
 *.dll
+
+*.zst.meta
