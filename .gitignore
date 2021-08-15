@@ -72,3 +72,5 @@ Recordings/
 .vsconfig
 
 unityProject.vrmanifest
+
+*.dll
