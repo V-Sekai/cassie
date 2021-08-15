@@ -1,0 +1,8 @@
+{
+  "InteractionModeSequence": [ 2 ],
+  "SystemSequence":          [ 2 ],
+  "ModelSequence":           [ 0 ],
+  "BreakTime":               [ 0 ],
+  "ShowExample":             [ 0 ],
+  "TimeLimit": [ 0 ]
+}

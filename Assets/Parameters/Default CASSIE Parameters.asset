@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c454ca17c5cfa654fb13388fe5adfb8a, type: 3}
+  m_Name: Default CASSIE Parameters
+  m_EditorClassIdentifier: 
+  defaultSmallDistance: 0.02
+  smallAngle: 0.5235988
+  minSamplingDistance: 0.1
+  minStrokeSize: 0.5
+  minStrokeActionTime: 0.2
+  samplesAblationDuration: 0.02
+  minG1SectionLength: 1
+  maxHookSectionLength: 3
+  maxHookSectionStrokeRatio: 0.15
+  bezierFittingError: 0.5
+  maxAngularVariationInG1Section: 0.7853982
+  proximityThreshold: 2
+  mergeConstraintsThreshold: 0.5
+  snapToExistingNodeThreshold: 1
+  projectToMirrorDistanceThreshold: 1.25
+  projectOnSurface: 1
+  projectToSurfaceDistanceThreshold: 2.5
+  muFidelity: 0.6
+  minDistanceBetweenAnchors: 1
+  exportRDPError: 0.1
