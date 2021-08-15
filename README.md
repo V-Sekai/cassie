@@ -20,7 +20,7 @@ You can try out directly our built executable: [download executable](https://ns.
 
 Alternatively, you can clone this repository and open the Unity project:
 
-* Install Unity 2019.3.9f1 from [Unity's website](https://unity3d.com/fr/get-unity/download/archive). The app was not tested with other versions of Unity. It will be incompatible with newer versions of Unity, such as Unity 2020, because we use the legacy VR input system.
+* Install Unity 2019.4.29f1 from [Unity's website](https://unity3d.com/fr/get-unity/download/archive). The app was not tested with other versions of Unity. It will be incompatible with newer versions of Unity, such as Unity 2020, because we use the legacy VR input system.
 * Install SteamVR if you do not have it already. This is necessary to have the input from the VR headset and controllers working. We provide bindings for HTC Vive Wand, Oculus Touch controllers, Valve Knuckles. If you have another type of controller that is supported by SteamVR, you should be able to set up your own bindings through the SteamVR 
 * Clone this repository, or download the source code from Gitlab UI.
 * Run the commands in `decompress.sh` to convert `zstd` to files.
