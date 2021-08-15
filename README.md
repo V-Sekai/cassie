@@ -10,7 +10,7 @@ The sketch export options could be helpful for future research projects that nee
 
 Please check out the project for more information: [[Project page]](https://em-yu.github.io/research/cassie/), [[Paper]](http://www-sop.inria.fr/reves/Basilic/2021/YASBS21/CASSIE_author_version.pdf)
 
-CASSIE is a research code. Therefore, expect to discover some bugs, compatibility and performance issues. If you are interested in using the project and need help setting up or adapting it, you can [contact us](https://github.com/V-Sekai/cassie/issues).
+CASSIE is research code. Therefore, expect to discover some bugs, compatibility and performance issues. If you are interested in using the project and need help setting up or adapting it, you can [contact us](https://github.com/V-Sekai/cassie/issues).
 
 ## Attribution
 
