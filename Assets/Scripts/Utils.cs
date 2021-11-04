@@ -67,13 +67,13 @@ namespace VRSketch
 
         public void SnapToOrtho(Vector3[] orthoDirections, float threshold)
         {
-            
+
             float maxCoord = 0f;
             int maxIdx = 0;
             for (int i = 0; i < 3; i++)
             {
                 float angle = Mathf.Abs(Vector3.Dot(n, orthoDirections[i]));
-                if ( angle > maxCoord)
+                if (angle > maxCoord)
                 {
                     maxCoord = angle;
                     maxIdx = i;
@@ -161,7 +161,7 @@ namespace VRSketch
         {
             float[] flat = new float[3 * vecs.Length];
             int i = 0;
-            foreach(Vector3 v in vecs)
+            foreach (Vector3 v in vecs)
             {
                 flat[i] = v.x;
                 flat[i + 1] = v.x;
@@ -215,7 +215,7 @@ namespace VRSketch
 
             float maxDist = 0;
             // Compute maximum fitting error
-            foreach(Vector3 p in points)
+            foreach (Vector3 p in points)
             {
                 float d = P.Distance(p);
                 if (d > maxDist)

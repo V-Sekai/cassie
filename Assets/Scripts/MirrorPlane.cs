@@ -105,7 +105,7 @@ public class MirrorPlane : MonoBehaviour
     {
         return plane.n;
     }
-    
+
     public Vector3 Mirror(Vector3 p)
     {
         return plane.Mirror(p);
@@ -142,7 +142,7 @@ public class MirrorPlane : MonoBehaviour
         {
             //if (score < proximity_threshold * 2f)
             if (score < projectionReflectionThreshold)
-                {
+            {
                 //Debug.Log("[Mirror] stroke crosses plane!");
                 return false;
             }

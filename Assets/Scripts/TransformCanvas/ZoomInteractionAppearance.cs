@@ -19,7 +19,7 @@ public class ZoomInteractionAppearance : MonoBehaviour
         lineRenderer.enabled = false;
     }
 
-    
+
     public void OnZoomStart(Vector3 primaryHand, Vector3 secondaryHand)
     {
         lineRenderer.enabled = true;
