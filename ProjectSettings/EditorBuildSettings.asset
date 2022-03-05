@@ -8,4 +8,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/VRSketching.unity
     guid: f81d7e9ae81ed2b4d825a6d5f7d84fa8
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 204faeddb4341fc4fb9d1de63887e68f,
+      type: 2}
