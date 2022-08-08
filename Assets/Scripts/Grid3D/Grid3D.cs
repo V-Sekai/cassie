@@ -63,7 +63,6 @@ public class Grid3D : MonoBehaviour
     {
         possibleStates = new LinkedList<GridState>();
         possibleStates.AddLast(new GridState(true, DisplayGridLines));
-        //possibleStates.AddLast(new GridState(true, !DisplayGridLines));
         possibleStates.AddLast(new GridState(false, false));
 
         state = possibleStates.First;

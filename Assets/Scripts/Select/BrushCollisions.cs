@@ -28,8 +28,6 @@ public class BrushCollisions : MonoBehaviour
         float desiredRadius = parameters.Current.DefaultScaleProximityThreshold;
 
         SphereCollider sphereCollider = GetComponent<SphereCollider>();
-        // true radius = transform.lossyScale * sphereCollider.radius
-        // => sphereCollider.radius = desiredRadius / transform.lossyScale;
         sphereCollider.radius = desiredRadius / transform.lossyScale.x;
     }
 
