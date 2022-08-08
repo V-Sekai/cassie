@@ -148,23 +148,7 @@ namespace VRSketch
 
         public static ControllerType GetControllerType()
         {
-            try
-            {
-                var filename = Path.Combine(Application.streamingAssetsPath, "controller_type.txt");
-                string data = File.ReadAllText(filename);
-
-                if (!Int32.TryParse(data, out int controllerInt))
-                    throw new Exception("Cannot open controller type config file!");
-
-                return (ControllerType)controllerInt;
-
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError(ex.Message);
-            }
-
-            return ControllerType.Vive;
+            return (ControllerType)2;
         }
 
     }
