@@ -6,18 +6,12 @@ using Curve;
 
 public class Constraint
 {
-    //private ConstraintType type;
     public Vector3 Position { get; private set; }
     public PointOnCurve NewCurveData { get; private set; }
 
-    //public float CreationTime { get; }
-
-
     public Constraint(Vector3 position)
     {
-        //this.type = type;
         this.Position = position;
-        //CreationTime = Time.time;
     }
 
     public void ProjectOn(BezierCurve newCurve, int anchorIdx)
@@ -39,7 +33,6 @@ public class Constraint
         if (r != null)
         {
             float t_prime = c.Reparameterize((Reparameterization)r, t);
-            //Debug.Log("new param = " + t_prime.ToString("F6"));
             NewCurveData = c.GetPointOnCurve(t_prime);
         }
         else
