@@ -32,18 +32,14 @@ You can clone this repository and open the Unity project:
 * Install SteamVR if you do not have it already. This is necessary to have the input from the VR headset and controllers working. We provide bindings for HTC Vive Wand, Oculus Touch controllers, Valve Knuckles. If you have another type of controller that is supported by SteamVR, you should be able to set up your own bindings through the SteamVR 
 * Clone this repository.
 * Run the commands in `decompress.sh` to convert `zstd` to files.
-* Open the Unity project with Unity 2019.4.29f1. Find the correct scene in `Assets > Scenes > VRSketching` and double-click it.
-* You are ready to build and play the project.
+* Open the Unity project with Unity 2019.4.40f1. Find the correct scene in `Assets > Scenes > VRSketching` and double-click it.
+* You are now ready to build and play the project.
 
 ### Settings
 
 #### Set up controller type and dominant hand
 
 * Go to `Assets/StreamingAssets`
-* Open `controller_type.txt` and set your controller type (this is used to display a controller specific cheat sheet with all the controls in the VR scene, controller binding is set up automatically through SteamVR)
-  * 0 = HTC Vive
-  * 1 = Oculus
-  * 2 = Valve
 * Open `dominant_hand.txt` and set your dominant hand:
   * 0 = right-handed
   * 1 = left-handed
@@ -81,7 +77,7 @@ When exporting multiple data files are created (the file naming convention may v
 * `[timestamp]_([system]).curves`: a file that stores all strokes in the current sketch as polylines. `.curves` is designed as a super easy format to import in other systems that treat 3D polylines. Please check out our [data repository](https://gitlab.inria.fr/D3/cassie-data) to find example scripts to import this file format.
 * `[timestamp]_([system])-input.curves`: a file that stores the input samples captured for all strokes in the current sketch as polylines—same format as before, but stores the strokes without any neatening.
 * `[timestamp]_([system])_graph.json`: a file that stores the graph data structure of the current sketch. Please refer to the [data repository](https://gitlab.inria.fr/D3/cassie-data) to find a description of this file format and example scripts to read the data with Python and visualize it.
-* `[timestamp]_[system].json`: you will only have this file when exporting with `Next` on the controller. The json is a log of the entire sketching session, which we used to analyze the remote user study data. Most probably useless for future use cases.
+* `[timestamp]_[system].json`: you will only have this file when exporting with `Next` on the controller. The json is a log of the entire sketching session, which we used to analyze the remote user study data. Probably useless for future use cases.
 
 You can choose which file formats you wish to have at export by editing the script attributes in `ExportController` in the scene. All file formats are active by default. You can also customize whether the scene should be cleared after export or not (default is: not clearing the scene).
 
