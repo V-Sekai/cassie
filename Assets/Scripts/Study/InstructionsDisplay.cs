@@ -106,7 +106,6 @@ public class InstructionsDisplay : MonoBehaviour
         if (modalMode)
         {
             rectTransform.anchoredPosition3D = cameraTransform.position + cameraTransform.forward * 0.8f + new Vector3(0f, -0.2f, 0f);
-            //rectTransform.
             rectTransform.LookAt(cameraTransform.position);
             label.fontSize = 6;
 
