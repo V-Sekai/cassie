@@ -72,7 +72,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _ZFightingOffset: 0.0001
+    - _ZFightingOffset: 0.000101159654
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.38875046, g: 0.7528631, b: 0.9056604, a: 1}
