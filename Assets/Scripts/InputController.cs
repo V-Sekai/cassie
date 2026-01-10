@@ -150,6 +150,35 @@ public class InputController : MonoBehaviour
         // Set up controller cheatsheet
         controllerType = StudyUtils.GetControllerType();
         instructionsDisplay.SetControllers(controllerType, StudyUtils.IsRightHandedConfig());
+
+        // Auto-assign hand transforms if not set in inspector
+        if (primaryHandTransform == null)
+        {
+            GameObject primaryHandObj = GameObject.Find("Controller (primary hand)");
+            if (primaryHandObj != null)
+            {
+                primaryHandTransform = primaryHandObj.transform;
+                Debug.Log("Auto-assigned primary hand transform");
+            }
+            else
+            {
+                Debug.LogError("Could not find 'Controller (primary hand)' GameObject!");
+            }
+        }
+
+        if (secondaryHandTransform == null)
+        {
+            GameObject secondaryHandObj = GameObject.Find("Controller (secondary hand)");
+            if (secondaryHandObj != null)
+            {
+                secondaryHandTransform = secondaryHandObj.transform;
+                Debug.Log("Auto-assigned secondary hand transform");
+            }
+            else
+            {
+                Debug.LogError("Could not find 'Controller (secondary hand)' GameObject!");
+            }
+        }
     }
 
 
