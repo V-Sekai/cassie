@@ -26,8 +26,6 @@
             #pragma geometry geo
             #pragma fragment PSMain
             #pragma target 5.0
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ UNITY_SINGLE_PASS_STEREO STEREO_INSTANCING_ON STEREO_MULTIVIEW_ON
 
             #define PI 3.1415
             #define N_VERTEX_CIRCLE 20
@@ -52,7 +50,6 @@
             {
                 float4 pos : SV_POSITION;
                 float opacity : COLOR0;
-                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             float ComputeOpacity(float3 worldSpacePos, float baseOpacity)
@@ -126,10 +123,8 @@
             }
 
             [maxvertexcount((N_VERTEX_CIRCLE + 1) * 2 + 4 * 3)]
-            void geo(point float4 IN[1] : SV_POSITION, inout TriangleStream<geometryOutput> triStream, uint instanceID : SV_InstanceID)
+            void geo(point float4 IN[1] : SV_POSITION, inout TriangleStream<geometryOutput> triStream)
             {
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(instanceID);
-                
                 float3 pos = IN[0].xyz;
                 // Compare world space input position with focus point world space position
                 float focus_point_distance = distance(pos, _FocusPoint);
@@ -154,12 +149,10 @@
 
                     o.pos = onCirclePos;
                     o.opacity = opacity;
-                    UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(IN[0], o);
                     triStream.Append(o);
 
                     o.pos = centerClipPos;
                     o.opacity = opacity;
-                    UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(IN[0], o);
                     triStream.Append(o);
                 }
 
@@ -199,7 +192,6 @@
 
             float4 PSMain(geometryOutput i) : SV_Target
             {
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 float4 c = _Color;
                 c.a = i.opacity;
                 return c;

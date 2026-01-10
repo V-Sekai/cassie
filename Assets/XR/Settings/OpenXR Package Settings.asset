@@ -660,7 +660,7 @@ MonoBehaviour:
   - {fileID: -3872751740724350837}
   - {fileID: -108256539911643676}
   - {fileID: -7947483872353857426}
-  m_renderMode: 1
+  m_renderMode: 0
   m_depthSubmissionMode: 0
   m_symmetricProjection: 0
 --- !u!114 &2159568337097904666
