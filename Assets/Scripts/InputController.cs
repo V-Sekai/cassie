@@ -5,7 +5,6 @@ using UnityEditor;
 using VRSketch;
 using System;
 using System.IO;
-using Tilia.Input.UnityInputSystem.Transformation.Conversion;
 using UnityEngine.InputSystem;
 using UnityEngine.XR;
 
@@ -23,19 +22,9 @@ public class InputController : MonoBehaviour
     public Transform primaryHandTransform;
     public Transform secondaryHandTransform;
 
-    // INPUTS
-    [Header("Tilia Actions")]
-    public InputActionPropertyToFloat drawAction;
-    public InputActionPropertyToBoolean addPatchAction;
-    public InputActionPropertyToBoolean eraseAction;
-    public InputActionPropertyToBoolean grabAction;
-    public InputActionPropertyToBoolean zoomAction;
-    public InputActionPropertyToBoolean toggleGridStateAction;
-    public InputActionPropertyToBoolean toggleMirror;
-
-    public InputActionPropertyToBoolean switchSystemAction;
-    
-
+    // INPUTS - OpenXR Quest Touch Controller Input Actions
+    [Header("Input Actions")]
+    private QuestTouchInputActions inputActions;
 
     public Transform headTransform;
 
@@ -46,10 +35,6 @@ public class InputController : MonoBehaviour
     private bool rightHanded = true;
     private XRNode primaryNode;
     private XRNode secondaryNode;
-
-    // STUDY INPUTS
-    [Header("Study related inputs")]
-    public InputActionPropertyToBoolean studyNextAction;
     //public KeyCode nextStepKey = KeyCode.Space;
 
     // ACTION CONTROLLERS
@@ -106,6 +91,13 @@ public class InputController : MonoBehaviour
 
     private float lastContinueInputTime;
 
+    // Double-press detection
+    private float doublePressThreshold = 0.3f; // 300ms window for double-press
+    private float lastAddPatchPressTime = -1f;
+    private float lastToggleGridPressTime = -1f;
+    private int addPatchPressCount = 0;
+    private int toggleGridPressCount = 0;
+
     static ProfilerMarker s_InputLoopMarker = new ProfilerMarker("VRSketch.TreatInput");
 
     private enum Action
@@ -123,7 +115,6 @@ public class InputController : MonoBehaviour
         if (!rightHanded)
         {
             Debug.Log("left handed");
-            // For Tilia, the actions are configured in Input Actions asset
         }
         else
         {
@@ -132,6 +123,10 @@ public class InputController : MonoBehaviour
 
         primaryNode = rightHanded ? XRNode.RightHand : XRNode.LeftHand;
         secondaryNode = rightHanded ? XRNode.LeftHand : XRNode.RightHand;
+        
+        // Initialize OpenXR input actions
+        inputActions = new QuestTouchInputActions();
+        inputActions.Enable();
     }
 
     private void SendHaptic(XRNode node, float amplitude, float duration)
@@ -141,6 +136,76 @@ public class InputController : MonoBehaviour
         {
             device.SendHapticImpulse(0, amplitude, duration);
         }
+    }
+
+    /// <summary>
+    /// Detects if a button was single-pressed (returns true on release if not double-pressed)
+    /// </summary>
+    private bool DetectSinglePress(bool isPressed, ref float lastPressTime, ref int pressCount)
+    {
+        if (isPressed)
+        {
+            // Button pressed
+            float timeSinceLastPress = Time.time - lastPressTime;
+            
+            if (timeSinceLastPress < doublePressThreshold)
+            {
+                // This is a potential double-press
+                pressCount = 2;
+                lastPressTime = Time.time;
+                return false; // Not a single press
+            }
+            else
+            {
+                // First press
+                pressCount = 1;
+                lastPressTime = Time.time;
+                return false; // Wait to see if there's a second press
+            }
+        }
+        else
+        {
+            // Button released
+            if (pressCount == 1 && Time.time - lastPressTime > doublePressThreshold)
+            {
+                // Single press confirmed (no second press within threshold)
+                pressCount = 0;
+                return true;
+            }
+            pressCount = 0;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Detects if a button was double-pressed (returns true immediately on second press)
+    /// </summary>
+    private bool DetectDoublePress(bool isPressed, ref float lastPressTime, ref int pressCount)
+    {
+        if (isPressed)
+        {
+            float timeSinceLastPress = Time.time - lastPressTime;
+            
+            if (timeSinceLastPress < doublePressThreshold && pressCount == 1)
+            {
+                // Double-press detected!
+                pressCount = 2;
+                lastPressTime = Time.time;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Helper to check if study next action should proceed
+    /// </summary>
+    private bool IsStudyNextPressed()
+    {
+        // Study next can be triggered by any button press in study mode
+        // For now, we can use a specific button or combination
+        // You can customize this based on your study requirements
+        return false; // Will be implemented based on your study flow
     }
 
     private void Start()
@@ -191,6 +256,14 @@ public class InputController : MonoBehaviour
         }
     }
 
+    private void OnDisable()
+    {
+        if (inputActions != null)
+        {
+            inputActions.Disable();
+            inputActions.Dispose();
+        }
+    }
 
     // Update is called once per frame
     void Update()
@@ -222,14 +295,27 @@ public class InputController : MonoBehaviour
 
             // Check for new input
 
-            // Dominant hand: drawing, deleting, adding patch, zooming
-            if (!lookingAtExample && drawAction.Result > 0.1f)
+            // Dominant hand (Right): drawing, deleting, adding patch, zooming
+            float rightTrigger = inputActions.XRIRightHand.Trigger.ReadValue<float>();
+            float rightGrip = inputActions.XRIRightHand.Grip.ReadValue<float>();
+            bool rightPrimaryButton = inputActions.XRIRightHand.PrimaryButton.IsPressed();
+            bool rightSecondaryButton = inputActions.XRIRightHand.SecondaryButton.IsPressed();
+            
+            // Secondary hand (Left): grabbing, system switching, grid/mirror toggle
+            float leftTrigger = inputActions.XRILeftHand.Trigger.ReadValue<float>();
+            float leftGrip = inputActions.XRILeftHand.Grip.ReadValue<float>();
+            bool leftPrimaryButton = inputActions.XRILeftHand.PrimaryButton.IsPressed();
+            bool leftSecondaryButton = inputActions.XRILeftHand.SecondaryButton.IsPressed();
+
+            // Right Trigger: Drawing (dominant hand)
+            if (!lookingAtExample && rightTrigger > 0.1f)
             {
                 currentAction = Action.Draw;
                 primaryHandAppearance.OnDrawStart();
                 drawController.NewStroke(drawingPos);
             }
-            else if (zoomAction.Result)
+            // Right Grip: Zoom (both hands)
+            else if (rightGrip > 0.1f || leftGrip > 0.1f)
             {
                 currentAction = Action.Zoom;
                 primaryHandAppearance.OnZoomStart();
@@ -239,7 +325,8 @@ public class InputController : MonoBehaviour
                 float handsDistance = Vector3.Distance(Pos(true), Pos(false));
                 zoomController.StartZoom(handsDistance);
             }
-            else if (!lookingAtExample && addPatchAction.Result)
+            // Right A Button (Primary): Add Patch
+            else if (!lookingAtExample && rightPrimaryButton)
             {
                 Debug.Log("add patch action");
                 if (addPatchController.TryAddPatch(pos, mirroring))
@@ -249,7 +336,8 @@ public class InputController : MonoBehaviour
                 else
                     primaryHandAppearance.OnNoOp();
             }
-            else if (!lookingAtExample && eraseAction.Result)
+            // Right B Button (Secondary): Delete/Erase
+            else if (!lookingAtExample && rightSecondaryButton)
             {
                 bool deleteSuccess = eraseController.TryDelete(Pos(true), out InteractionType type, out int elementID, mirror: mirroring);
                 if (deleteSuccess)
@@ -259,11 +347,10 @@ public class InputController : MonoBehaviour
                     // Log data
                     scenario.CurrentStep.Delete(headTransform, Pos(true), canvas.transform, type, elementID, mirroring);
                 }
-
             }
 
-            // Secondary hand: grabbing
-            else if (grabAction.Result)
+            // Left Grip: Grabbing (secondary hand)
+            else if (leftGrip > 0.1f)
             {
                 currentAction = Action.Grab;
                 secondaryHandAppearance.OnGrabStart();
@@ -271,13 +358,15 @@ public class InputController : MonoBehaviour
                 grabController.GrabStart(Pos(false), Rot(false));
             }
 
-            else if (toggleGridStateAction.Result)
+            // Left X Button (Primary): Toggle Grid State
+            else if (leftPrimaryButton)
             {
                 // Toggle grid state
                 //Debug.Log("toggle grid state");
                 grid.ToggleGridState();
             }
-            else if (toggleMirror.Result && mirrorAvailable)
+            // Left Y Button (Secondary): Toggle Mirror
+            else if (leftSecondaryButton && mirrorAvailable)
             {
                 if (mirroring)
                 {
@@ -290,7 +379,8 @@ public class InputController : MonoBehaviour
                     mirrorPlane.Show();
                 }
             }
-            else if (switchSystemAction.Result && mode.Equals(VRSketch.InteractionMode.FreeCreation))
+            // Left Trigger: Switch System (secondary hand)
+            else if (leftTrigger > 0.1f && mode.Equals(VRSketch.InteractionMode.FreeCreation))
             {
                 int currentSystemID = (int)this.sketchSystem;
                 int newSystemID = (currentSystemID + 2) % 4; // Switch between freehand and patch
@@ -312,12 +402,13 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Draw))
         {
-                if (drawAction.Result > 0.1f)
+                float rightTrigger = inputActions.XRIRightHand.Trigger.ReadValue<float>();
+                if (rightTrigger > 0.1f)
                 {
                     // Still drawing
                     Vector3 velocity = Vector3.zero; // removed
-                    float pressure = drawAction.Result;
-                drawController.UpdateStroke(drawingPos, rot, velocity, pressure);
+                    float pressure = rightTrigger;
+                    drawController.UpdateStroke(drawingPos, rot, velocity, pressure);
             }
             else
             {
@@ -334,7 +425,8 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Grab))
         {
-            if(!grabAction.Result)
+            float leftGrip = inputActions.XRILeftHand.Grip.ReadValue<float>();
+            if (leftGrip <= 0.1f)
             {
                 currentAction = Action.Idle;
                 secondaryHandAppearance.OnGrabEnd();
@@ -352,7 +444,9 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Zoom))
         {
-            if (!zoomAction.Result)
+            float rightGrip = inputActions.XRIRightHand.Grip.ReadValue<float>();
+            float leftGrip = inputActions.XRILeftHand.Grip.ReadValue<float>();
+            if (rightGrip <= 0.1f && leftGrip <= 0.1f)
             {
                 currentAction = Action.Idle;
                 zoomInteractionAppearance.OnZoomEnd();
@@ -391,7 +485,7 @@ public class InputController : MonoBehaviour
 #endif
         }
 
-        if (!lookingAtExample && !studyNextAction.Result)
+        if (!lookingAtExample && IsStudyNextPressed())
         {
             Debug.Log("on to the next step");
             waitingForConfirm = true;
@@ -436,7 +530,7 @@ public class InputController : MonoBehaviour
         //wait for button to be pressed (wait at least 0.5s for the break)
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && !studyNextAction.Result)
+            if (Time.time > lastContinueInputTime + 0.5f && !IsStudyNextPressed())
                 break;
             yield return null;
         }
@@ -467,7 +561,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && !studyNextAction.Result)
+            if (Time.time > lastContinueInputTime + 0.5f && !IsStudyNextPressed())
             {
                 break;
             }
@@ -501,12 +595,13 @@ public class InputController : MonoBehaviour
 
         while(true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.Result)
+            float rightTrigger = inputActions.XRIRightHand.Trigger.ReadValue<float>();
+            if (Time.time > lastContinueInputTime + 0.5f && IsStudyNextPressed())
             {
                 confirm = true;
                 break;
             }
-            if (Time.time > lastContinueInputTime + 0.5f && drawAction.Result > 0.5f)
+            if (Time.time > lastContinueInputTime + 0.5f && rightTrigger > 0.5f)
             {
                 confirm = false;
                 break;
@@ -546,7 +641,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.Result)
+            if (Time.time > lastContinueInputTime + 0.5f && IsStudyNextPressed())
                 break;
             yield return null;
         }
@@ -574,7 +669,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.Result)
+            if (Time.time > lastContinueInputTime + 0.5f && IsStudyNextPressed())
                 break;
             yield return null;
         }
