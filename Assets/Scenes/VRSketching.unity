@@ -1288,7 +1288,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22a6c1f8879a1954c913d5a2594da3fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  HapticOnCollision: 0
+  HapticOnCollision: 1
   saveStudyLogKey: 115
   exportSketchKey: 120
   primaryHandTransform: {fileID: 114000009559137264}
