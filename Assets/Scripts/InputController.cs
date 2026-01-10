@@ -1,11 +1,12 @@
 using System.Collections;
-using Valve.VR;
 using UnityEngine;
 using Unity.Profiling;
 using UnityEditor;
 using VRSketch;
 using System;
 using System.IO;
+using UnityEngine.InputSystem;
+using UnityEngine.XR;
 
 public class InputController : MonoBehaviour
 {
@@ -17,34 +18,23 @@ public class InputController : MonoBehaviour
     public KeyCode exportSketchKey = KeyCode.X;
 
     // HANDS
-    [Header("SteamVR Controllers")]
-    public SteamVR_Behaviour_Pose primaryHandObject;
-    public SteamVR_Behaviour_Pose secondaryHandObject;
+    [Header("Tilia Tracked Transforms")]
+    public Transform primaryHandTransform;
+    public Transform secondaryHandTransform;
 
-    // INPUTS
-    [Header("SteamVR Actions")]
-    public SteamVR_Action_Single drawAction;
-    public SteamVR_Action_Boolean addPatchAction;
-    public SteamVR_Action_Boolean eraseAction;
-    public SteamVR_Action_Boolean grabAction;
-    public SteamVR_Action_Boolean zoomAction;
-    public SteamVR_Action_Boolean toggleGridStateAction;
-    public SteamVR_Action_Boolean toggleMirror;
+    // INPUTS - OpenXR Quest Touch Controller Input Actions
+    [Header("Input Actions")]
+    private QuestTouchInputActions inputActions;
 
-    public SteamVR_Action_Boolean switchSystemAction;
-    
-
-
-    public SteamVR_Action_Pose pose;
-    public SteamVR_Input_Sources primarySource = SteamVR_Input_Sources.RightHand;
-    public SteamVR_Input_Sources secondarySource = SteamVR_Input_Sources.LeftHand;
     public Transform headTransform;
 
-    public SteamVR_Action_Vibration hapticAction;
+    private const bool primarySource = true;
+    private const bool secondarySource = false;
 
-    // STUDY INPUTS
-    [Header("Study related inputs")]
-    public SteamVR_Action_Boolean studyNextAction;
+    // Sources (for compatibility)
+    private bool rightHanded = true;
+    private XRNode primaryNode;
+    private XRNode secondaryNode;
     //public KeyCode nextStepKey = KeyCode.Space;
 
     // ACTION CONTROLLERS
@@ -101,6 +91,13 @@ public class InputController : MonoBehaviour
 
     private float lastContinueInputTime;
 
+    // Double-press detection
+    private float doublePressThreshold = 0.3f; // 300ms window for double-press
+    private float lastAddPatchPressTime = -1f;
+    private float lastToggleGridPressTime = -1f;
+    private int addPatchPressCount = 0;
+    private int toggleGridPressCount = 0;
+
     static ProfilerMarker s_InputLoopMarker = new ProfilerMarker("VRSketch.TreatInput");
 
     private enum Action
@@ -114,29 +111,101 @@ public class InputController : MonoBehaviour
     private void Awake()
     {
         // Sort out handed-ness
-        bool rightHanded = StudyUtils.IsRightHandedConfig();
+        rightHanded = StudyUtils.IsRightHandedConfig();
         if (!rightHanded)
         {
             Debug.Log("left handed");
-            // Change controller mappings
-            primaryHandObject.inputSource = SteamVR_Input_Sources.LeftHand;
-            secondaryHandObject.inputSource = SteamVR_Input_Sources.RightHand;
-
-            // Change actions source mappings
-            primarySource = SteamVR_Input_Sources.LeftHand;
-            secondarySource = SteamVR_Input_Sources.RightHand;
         }
         else
         {
             Debug.Log("right handed");
-            // Change controller mappings
-            primaryHandObject.inputSource = SteamVR_Input_Sources.RightHand;
-            secondaryHandObject.inputSource = SteamVR_Input_Sources.LeftHand;
-
-            // Change actions source mappings
-            primarySource = SteamVR_Input_Sources.RightHand;
-            secondarySource = SteamVR_Input_Sources.LeftHand;
         }
+
+        primaryNode = rightHanded ? XRNode.RightHand : XRNode.LeftHand;
+        secondaryNode = rightHanded ? XRNode.LeftHand : XRNode.RightHand;
+        
+        // Initialize OpenXR input actions
+        inputActions = new QuestTouchInputActions();
+        inputActions.Enable();
+    }
+
+    private void SendHaptic(XRNode node, float amplitude, float duration)
+    {
+        UnityEngine.XR.InputDevice device = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(node);
+        if (device.isValid)
+        {
+            device.SendHapticImpulse(0, amplitude, duration);
+        }
+    }
+
+    /// <summary>
+    /// Detects if a button was single-pressed (returns true on release if not double-pressed)
+    /// </summary>
+    private bool DetectSinglePress(bool isPressed, ref float lastPressTime, ref int pressCount)
+    {
+        if (isPressed)
+        {
+            // Button pressed
+            float timeSinceLastPress = Time.time - lastPressTime;
+            
+            if (timeSinceLastPress < doublePressThreshold)
+            {
+                // This is a potential double-press
+                pressCount = 2;
+                lastPressTime = Time.time;
+                return false; // Not a single press
+            }
+            else
+            {
+                // First press
+                pressCount = 1;
+                lastPressTime = Time.time;
+                return false; // Wait to see if there's a second press
+            }
+        }
+        else
+        {
+            // Button released
+            if (pressCount == 1 && Time.time - lastPressTime > doublePressThreshold)
+            {
+                // Single press confirmed (no second press within threshold)
+                pressCount = 0;
+                return true;
+            }
+            pressCount = 0;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Detects if a button was double-pressed (returns true immediately on second press)
+    /// </summary>
+    private bool DetectDoublePress(bool isPressed, ref float lastPressTime, ref int pressCount)
+    {
+        if (isPressed)
+        {
+            float timeSinceLastPress = Time.time - lastPressTime;
+            
+            if (timeSinceLastPress < doublePressThreshold && pressCount == 1)
+            {
+                // Double-press detected!
+                pressCount = 2;
+                lastPressTime = Time.time;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Helper to check if study next action should proceed
+    /// </summary>
+    private bool IsStudyNextPressed()
+    {
+        // Study next can be triggered by any button press in study mode
+        // For now, we can use a specific button or combination
+        // You can customize this based on your study requirements
+        return false; // Will be implemented based on your study flow
     }
 
     private void Start()
@@ -148,6 +217,14 @@ public class InputController : MonoBehaviour
         instructionsDisplay.SetControllers(controllerType, StudyUtils.IsRightHandedConfig());
     }
 
+    private void OnDisable()
+    {
+        if (inputActions != null)
+        {
+            inputActions.Disable();
+            inputActions.Dispose();
+        }
+    }
 
     // Update is called once per frame
     void Update()
@@ -160,8 +237,8 @@ public class InputController : MonoBehaviour
         s_InputLoopMarker.Begin();
 
         // Current input data
-        Vector3 pos = Pos(primarySource);
-        Quaternion rot = Rot(primarySource);
+        Vector3 pos = Pos(true);
+        Quaternion rot = Rot(true);
 
         Vector3 drawingPos = pos;
 
@@ -174,65 +251,83 @@ public class InputController : MonoBehaviour
             if (Time.time - lastRecordedIdle > 2f)
             {
                 lastRecordedIdle = Time.time;
-                scenario.CurrentStep.Idle(headTransform, Pos(primarySource), canvas.transform, mirroring);
+                scenario.CurrentStep.Idle(headTransform, Pos(true), canvas.transform, mirroring);
             }
 
             // Check for new input
 
-            // Dominant hand: drawing, deleting, adding patch, zooming
-            if (!lookingAtExample && drawAction.GetAxis(primarySource) > 0.1f)
+            // Dominant hand (Right): drawing, deleting, adding patch, zooming
+            float rightTrigger = inputActions.XRIRightHand.Trigger.ReadValue<float>();
+            float rightGrip = inputActions.XRIRightHand.Grip.ReadValue<float>();
+            bool rightPrimaryButton = inputActions.XRIRightHand.PrimaryButton.IsPressed();
+            bool rightSecondaryButton = inputActions.XRIRightHand.SecondaryButton.IsPressed();
+            
+            // Secondary hand (Left): grabbing, system switching, grid/mirror toggle
+            float leftTrigger = inputActions.XRILeftHand.Trigger.ReadValue<float>();
+            float leftGrip = inputActions.XRILeftHand.Grip.ReadValue<float>();
+            bool leftPrimaryButton = inputActions.XRILeftHand.PrimaryButton.IsPressed();
+            bool leftSecondaryButton = inputActions.XRILeftHand.SecondaryButton.IsPressed();
+
+            // Right Trigger: Drawing (dominant hand)
+            if (!lookingAtExample && rightTrigger > 0.1f)
             {
                 currentAction = Action.Draw;
                 primaryHandAppearance.OnDrawStart();
                 drawController.NewStroke(drawingPos);
             }
-            else if (zoomAction.GetStateDown(primarySource))
+            // Right Grip: Zoom (both hands)
+            else if (rightGrip > 0.1f && leftGrip > 0.1f)
             {
                 currentAction = Action.Zoom;
                 primaryHandAppearance.OnZoomStart();
                 secondaryHandAppearance.OnZoomStart();
-                zoomInteractionAppearance.OnZoomStart(Pos(primarySource), Pos(secondarySource));
+                zoomInteractionAppearance.OnZoomStart(Pos(true), Pos(false));
                 grid.OnTransformStart();
-                float handsDistance = Vector3.Distance(Pos(primarySource), Pos(secondarySource));
+                float handsDistance = Vector3.Distance(Pos(true), Pos(false));
                 zoomController.StartZoom(handsDistance);
             }
-            else if (!lookingAtExample && addPatchAction.GetStateDown(primarySource))
+            // Right A Button (Primary): Add Patch
+            else if (!lookingAtExample && rightPrimaryButton)
             {
                 Debug.Log("add patch action");
                 if (addPatchController.TryAddPatch(pos, mirroring))
-                    hapticAction.Execute(0f, 0.1f, 25, 5, primarySource);
+                {
+                    SendHaptic(primaryNode, 0.1f, 0.1f);
+                }
                 else
                     primaryHandAppearance.OnNoOp();
             }
-            else if (!lookingAtExample && eraseAction.GetStateDown(primarySource))
+            // Right B Button (Secondary): Delete/Erase
+            else if (!lookingAtExample && rightSecondaryButton)
             {
-                bool deleteSuccess = eraseController.TryDelete(Pos(primarySource), out InteractionType type, out int elementID, mirror: mirroring);
+                bool deleteSuccess = eraseController.TryDelete(Pos(true), out InteractionType type, out int elementID, mirror: mirroring);
                 if (deleteSuccess)
                 {
-                    hapticAction.Execute(0f, 0.1f, 25, 5, primarySource);
+                    SendHaptic(primaryNode, 0.1f, 0.1f);
 
                     // Log data
-                    scenario.CurrentStep.Delete(headTransform, Pos(primarySource), canvas.transform, type, elementID, mirroring);
+                    scenario.CurrentStep.Delete(headTransform, Pos(true), canvas.transform, type, elementID, mirroring);
                 }
-
             }
 
-            // Secondary hand: grabbing
-            else if (grabAction.GetStateDown(secondarySource))
+            // Left Grip: Grabbing (secondary hand)
+            else if (leftGrip > 0.1f)
             {
                 currentAction = Action.Grab;
                 secondaryHandAppearance.OnGrabStart();
                 grid.OnTransformStart();
-                grabController.GrabStart(Pos(secondarySource), Rot(secondarySource));
+                grabController.GrabStart(Pos(false), Rot(false));
             }
 
-            else if (toggleGridStateAction.GetStateDown(secondarySource))
+            // Left X Button (Primary): Toggle Grid State
+            else if (leftPrimaryButton)
             {
                 // Toggle grid state
                 //Debug.Log("toggle grid state");
                 grid.ToggleGridState();
             }
-            else if (toggleMirror.GetStateDown(secondarySource) && mirrorAvailable)
+            // Left Y Button (Secondary): Toggle Mirror
+            else if (leftSecondaryButton && mirrorAvailable)
             {
                 if (mirroring)
                 {
@@ -245,13 +340,14 @@ public class InputController : MonoBehaviour
                     mirrorPlane.Show();
                 }
             }
-            else if (switchSystemAction.GetStateDown(secondarySource) && mode.Equals(VRSketch.InteractionMode.FreeCreation))
+            // Left Trigger: Switch System (secondary hand)
+            else if (leftTrigger > 0.1f && mode.Equals(VRSketch.InteractionMode.FreeCreation))
             {
                 int currentSystemID = (int)this.sketchSystem;
                 int newSystemID = (currentSystemID + 2) % 4; // Switch between freehand and patch
                 OnSystemChange((SketchSystem)newSystemID, clearCanvas: false);
                 UpdateInstructions();
-                hapticAction.Execute(0f, 0.1f, 25, 5, secondarySource);
+                SendHaptic(secondaryNode, 0.1f, 0.1f);
             }
 
             // Keyboard
@@ -267,12 +363,13 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Draw))
         {
-            if (drawAction.GetAxis(primarySource) > 0.1f)
-            {
-                // Still drawing
-                Vector3 velocity = pose.GetVelocity(primarySource);
-                float pressure = drawAction.GetAxis(primarySource);
-                drawController.UpdateStroke(drawingPos, rot, velocity, pressure);
+                float rightTrigger = inputActions.XRIRightHand.Trigger.ReadValue<float>();
+                if (rightTrigger > 0.1f)
+                {
+                    // Still drawing
+                    Vector3 velocity = Vector3.zero; // removed
+                    float pressure = rightTrigger;
+                    drawController.UpdateStroke(drawingPos, rot, velocity, pressure);
             }
             else
             {
@@ -289,7 +386,8 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Grab))
         {
-            if(grabAction.GetStateUp(secondarySource))
+            float leftGrip = inputActions.XRILeftHand.Grip.ReadValue<float>();
+            if (leftGrip <= 0.1f)
             {
                 currentAction = Action.Idle;
                 secondaryHandAppearance.OnGrabEnd();
@@ -307,7 +405,9 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Zoom))
         {
-            if (zoomAction.GetStateUp(primarySource))
+            float rightGrip = inputActions.XRIRightHand.Grip.ReadValue<float>();
+            float leftGrip = inputActions.XRILeftHand.Grip.ReadValue<float>();
+            if (rightGrip <= 0.1f && leftGrip <= 0.1f)
             {
                 currentAction = Action.Idle;
                 zoomInteractionAppearance.OnZoomEnd();
@@ -346,7 +446,7 @@ public class InputController : MonoBehaviour
 #endif
         }
 
-        if (!lookingAtExample && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+        if (!lookingAtExample && IsStudyNextPressed())
         {
             Debug.Log("on to the next step");
             waitingForConfirm = true;
@@ -391,7 +491,7 @@ public class InputController : MonoBehaviour
         //wait for button to be pressed (wait at least 0.5s for the break)
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && !IsStudyNextPressed())
                 break;
             yield return null;
         }
@@ -422,7 +522,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && !IsStudyNextPressed())
             {
                 break;
             }
@@ -456,12 +556,13 @@ public class InputController : MonoBehaviour
 
         while(true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            float rightTrigger = inputActions.XRIRightHand.Trigger.ReadValue<float>();
+            if (Time.time > lastContinueInputTime + 0.5f && IsStudyNextPressed())
             {
                 confirm = true;
                 break;
             }
-            if (Time.time > lastContinueInputTime + 0.5f && drawAction.GetAxis(SteamVR_Input_Sources.Any) > 0.5f)
+            if (Time.time > lastContinueInputTime + 0.5f && rightTrigger > 0.5f)
             {
                 confirm = false;
                 break;
@@ -501,7 +602,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && IsStudyNextPressed())
                 break;
             yield return null;
         }
@@ -529,7 +630,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && IsStudyNextPressed())
                 break;
             yield return null;
         }
@@ -701,14 +802,14 @@ public class InputController : MonoBehaviour
     //    scenario.CurrentStep.Delete(headTransform, Pos(primarySource), canvasTransform, InteractionType.SurfaceDelete, patchID);
     //}
 
-    private Vector3 Pos(SteamVR_Input_Sources source)
+    private Vector3 Pos(bool isPrimary)
     {
-        return pose.GetLocalPosition(source);
+        return isPrimary ? primaryHandTransform.position : secondaryHandTransform.position;
     }
 
-    private Quaternion Rot(SteamVR_Input_Sources source)
+    private Quaternion Rot(bool isPrimary)
     {
-        return pose.GetLocalRotation(source);
+        return isPrimary ? primaryHandTransform.rotation : secondaryHandTransform.rotation;
     }
 
     private void ConfirmEndAction()
