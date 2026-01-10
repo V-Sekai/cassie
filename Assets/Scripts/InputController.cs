@@ -152,31 +152,41 @@ public class InputController : MonoBehaviour
         instructionsDisplay.SetControllers(controllerType, StudyUtils.IsRightHandedConfig());
 
         // Auto-assign hand transforms if not set in inspector
-        if (primaryHandTransform == null)
+        if (primaryHandTransform == null || secondaryHandTransform == null)
         {
-            GameObject primaryHandObj = GameObject.Find("Controller (primary hand)");
-            if (primaryHandObj != null)
+            GameObject player = GameObject.Find("Player");
+            if (player != null)
             {
-                primaryHandTransform = primaryHandObj.transform;
-                Debug.Log("Auto-assigned primary hand transform");
+                if (primaryHandTransform == null)
+                {
+                    Transform primary = player.transform.Find("Controller (primary hand)");
+                    if (primary != null)
+                    {
+                        primaryHandTransform = primary;
+                        Debug.Log("Auto-assigned primary hand transform");
+                    }
+                    else
+                    {
+                        Debug.LogError("Could not find 'Controller (primary hand)' under Player!");
+                    }
+                }
+                if (secondaryHandTransform == null)
+                {
+                    Transform secondary = player.transform.Find("Controller (secondary hand)");
+                    if (secondary != null)
+                    {
+                        secondaryHandTransform = secondary;
+                        Debug.Log("Auto-assigned secondary hand transform");
+                    }
+                    else
+                    {
+                        Debug.LogError("Could not find 'Controller (secondary hand)' under Player!");
+                    }
+                }
             }
             else
             {
-                Debug.LogError("Could not find 'Controller (primary hand)' GameObject!");
-            }
-        }
-
-        if (secondaryHandTransform == null)
-        {
-            GameObject secondaryHandObj = GameObject.Find("Controller (secondary hand)");
-            if (secondaryHandObj != null)
-            {
-                secondaryHandTransform = secondaryHandObj.transform;
-                Debug.Log("Auto-assigned secondary hand transform");
-            }
-            else
-            {
-                Debug.LogError("Could not find 'Controller (secondary hand)' GameObject!");
+                Debug.LogError("Could not find Player GameObject!");
             }
         }
     }
