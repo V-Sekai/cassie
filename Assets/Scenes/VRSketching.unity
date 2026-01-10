@@ -204,6 +204,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 6632083072475503153}
   m_PrefabAsset: {fileID: 0}
+--- !u!20 &229169630 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 6253059995006772038, guid: 9959aaa5fcea91548bbdc004a59e2d3e,
+    type: 3}
+  m_PrefabInstance: {fileID: 6632083072475503153}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &229169631 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7369077002949797549, guid: 9959aaa5fcea91548bbdc004a59e2d3e,
+    type: 3}
+  m_PrefabInstance: {fileID: 6632083072475503153}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &313236068
 GameObject:
   m_ObjectHideFlags: 0
@@ -362,7 +374,7 @@ MonoBehaviour:
   SurfacePatchMaterial: {fileID: 2100000, guid: 7cd85d4e5b6f84e458ec5ced1092fa05,
     type: 2}
   Canvas: {fileID: 617152432}
-  mainCamera: {fileID: 0}
+  mainCamera: {fileID: 229169630}
   inputController: {fileID: 1312322973}
   DebugVisualization: 0
   DisplayPatches: 1
@@ -1127,7 +1139,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 664f9eca49613044d8209a06d5ed677b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  HeadsetTransform: {fileID: 0}
+  HeadsetTransform: {fileID: 834411472}
   DepthOffset: 0.2
 --- !u!1 &927689880
 GameObject:
@@ -1281,16 +1293,7 @@ MonoBehaviour:
   exportSketchKey: 120
   primaryHandTransform: {fileID: 114000009559137264}
   secondaryHandTransform: {fileID: 114000010355328104}
-  drawAction: {fileID: 0}
-  addPatchAction: {fileID: 0}
-  eraseAction: {fileID: 0}
-  grabAction: {fileID: 0}
-  zoomAction: {fileID: 0}
-  toggleGridStateAction: {fileID: 0}
-  toggleMirror: {fileID: 0}
-  switchSystemAction: {fileID: 0}
-  headTransform: {fileID: 0}
-  studyNextAction: {fileID: 0}
+  headTransform: {fileID: 229169631}
   drawController: {fileID: 1967445020}
   eraseController: {fileID: 1335580794}
   grabController: {fileID: 927689881}
@@ -1306,7 +1309,7 @@ MonoBehaviour:
   IdleRecordFrequency: 2
   sketchModelController: {fileID: 1184287909}
   instructionsDisplay: {fileID: 1721267059}
-  controllerType: 0
+  controllerType: 1
   ShowInstructions: 1
   ShowModel: 1
   canvas: {fileID: 617152432}
@@ -2346,6 +2349,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 355859445449731792, guid: 9959aaa5fcea91548bbdc004a59e2d3e,
+        type: 3}
+      propertyPath: cameraTransform
+      value: 
+      objectReference: {fileID: 834411472}
     - target: {fileID: 6632083072995378300, guid: 9959aaa5fcea91548bbdc004a59e2d3e,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
