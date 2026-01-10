@@ -1,11 +1,13 @@
 using System.Collections;
-using Valve.VR;
 using UnityEngine;
 using Unity.Profiling;
 using UnityEditor;
 using VRSketch;
 using System;
 using System.IO;
+using Tilia.Input.UnityInputSystem.Transformation.Conversion;
+using UnityEngine.InputSystem;
+using UnityEngine.XR;
 
 public class InputController : MonoBehaviour
 {
@@ -17,34 +19,37 @@ public class InputController : MonoBehaviour
     public KeyCode exportSketchKey = KeyCode.X;
 
     // HANDS
-    [Header("SteamVR Controllers")]
-    public SteamVR_Behaviour_Pose primaryHandObject;
-    public SteamVR_Behaviour_Pose secondaryHandObject;
+    [Header("Tilia Tracked Transforms")]
+    public Transform primaryHandTransform;
+    public Transform secondaryHandTransform;
 
     // INPUTS
-    [Header("SteamVR Actions")]
-    public SteamVR_Action_Single drawAction;
-    public SteamVR_Action_Boolean addPatchAction;
-    public SteamVR_Action_Boolean eraseAction;
-    public SteamVR_Action_Boolean grabAction;
-    public SteamVR_Action_Boolean zoomAction;
-    public SteamVR_Action_Boolean toggleGridStateAction;
-    public SteamVR_Action_Boolean toggleMirror;
+    [Header("Tilia Actions")]
+    public InputActionPropertyToFloat drawAction;
+    public InputActionPropertyToBoolean addPatchAction;
+    public InputActionPropertyToBoolean eraseAction;
+    public InputActionPropertyToBoolean grabAction;
+    public InputActionPropertyToBoolean zoomAction;
+    public InputActionPropertyToBoolean toggleGridStateAction;
+    public InputActionPropertyToBoolean toggleMirror;
 
-    public SteamVR_Action_Boolean switchSystemAction;
+    public InputActionPropertyToBoolean switchSystemAction;
     
 
 
-    public SteamVR_Action_Pose pose;
-    public SteamVR_Input_Sources primarySource = SteamVR_Input_Sources.RightHand;
-    public SteamVR_Input_Sources secondarySource = SteamVR_Input_Sources.LeftHand;
     public Transform headTransform;
 
-    public SteamVR_Action_Vibration hapticAction;
+    private const bool primarySource = true;
+    private const bool secondarySource = false;
+
+    // Sources (for compatibility)
+    private bool rightHanded = true;
+    private XRNode primaryNode;
+    private XRNode secondaryNode;
 
     // STUDY INPUTS
     [Header("Study related inputs")]
-    public SteamVR_Action_Boolean studyNextAction;
+    public InputActionPropertyToBoolean studyNextAction;
     //public KeyCode nextStepKey = KeyCode.Space;
 
     // ACTION CONTROLLERS
@@ -114,28 +119,27 @@ public class InputController : MonoBehaviour
     private void Awake()
     {
         // Sort out handed-ness
-        bool rightHanded = StudyUtils.IsRightHandedConfig();
+        rightHanded = StudyUtils.IsRightHandedConfig();
         if (!rightHanded)
         {
             Debug.Log("left handed");
-            // Change controller mappings
-            primaryHandObject.inputSource = SteamVR_Input_Sources.LeftHand;
-            secondaryHandObject.inputSource = SteamVR_Input_Sources.RightHand;
-
-            // Change actions source mappings
-            primarySource = SteamVR_Input_Sources.LeftHand;
-            secondarySource = SteamVR_Input_Sources.RightHand;
+            // For Tilia, the actions are configured in Input Actions asset
         }
         else
         {
             Debug.Log("right handed");
-            // Change controller mappings
-            primaryHandObject.inputSource = SteamVR_Input_Sources.RightHand;
-            secondaryHandObject.inputSource = SteamVR_Input_Sources.LeftHand;
+        }
 
-            // Change actions source mappings
-            primarySource = SteamVR_Input_Sources.RightHand;
-            secondarySource = SteamVR_Input_Sources.LeftHand;
+        primaryNode = rightHanded ? XRNode.RightHand : XRNode.LeftHand;
+        secondaryNode = rightHanded ? XRNode.LeftHand : XRNode.RightHand;
+    }
+
+    private void SendHaptic(XRNode node, float amplitude, float duration)
+    {
+        UnityEngine.XR.InputDevice device = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(node);
+        if (device.isValid)
+        {
+            device.SendHapticImpulse(0, amplitude, duration);
         }
     }
 
@@ -160,8 +164,8 @@ public class InputController : MonoBehaviour
         s_InputLoopMarker.Begin();
 
         // Current input data
-        Vector3 pos = Pos(primarySource);
-        Quaternion rot = Rot(primarySource);
+        Vector3 pos = Pos(true);
+        Quaternion rot = Rot(true);
 
         Vector3 drawingPos = pos;
 
@@ -174,65 +178,67 @@ public class InputController : MonoBehaviour
             if (Time.time - lastRecordedIdle > 2f)
             {
                 lastRecordedIdle = Time.time;
-                scenario.CurrentStep.Idle(headTransform, Pos(primarySource), canvas.transform, mirroring);
+                scenario.CurrentStep.Idle(headTransform, Pos(true), canvas.transform, mirroring);
             }
 
             // Check for new input
 
             // Dominant hand: drawing, deleting, adding patch, zooming
-            if (!lookingAtExample && drawAction.GetAxis(primarySource) > 0.1f)
+            if (!lookingAtExample && drawAction.Result > 0.1f)
             {
                 currentAction = Action.Draw;
                 primaryHandAppearance.OnDrawStart();
                 drawController.NewStroke(drawingPos);
             }
-            else if (zoomAction.GetStateDown(primarySource))
+            else if (zoomAction.Result)
             {
                 currentAction = Action.Zoom;
                 primaryHandAppearance.OnZoomStart();
                 secondaryHandAppearance.OnZoomStart();
-                zoomInteractionAppearance.OnZoomStart(Pos(primarySource), Pos(secondarySource));
+                zoomInteractionAppearance.OnZoomStart(Pos(true), Pos(false));
                 grid.OnTransformStart();
-                float handsDistance = Vector3.Distance(Pos(primarySource), Pos(secondarySource));
+                float handsDistance = Vector3.Distance(Pos(true), Pos(false));
                 zoomController.StartZoom(handsDistance);
             }
-            else if (!lookingAtExample && addPatchAction.GetStateDown(primarySource))
+            else if (!lookingAtExample && addPatchAction.Result)
             {
                 Debug.Log("add patch action");
                 if (addPatchController.TryAddPatch(pos, mirroring))
-                    hapticAction.Execute(0f, 0.1f, 25, 5, primarySource);
+                {
+                    SendHaptic(primaryNode, 0.1f, 0.1f);
+                }
                 else
                     primaryHandAppearance.OnNoOp();
             }
-            else if (!lookingAtExample && eraseAction.GetStateDown(primarySource))
+            else if (!lookingAtExample && eraseAction.Result)
             {
-                bool deleteSuccess = eraseController.TryDelete(Pos(primarySource), out InteractionType type, out int elementID, mirror: mirroring);
+                bool deleteSuccess = eraseController.TryDelete(Pos(true), out InteractionType type, out int elementID, mirror: mirroring);
                 if (deleteSuccess)
                 {
-                    hapticAction.Execute(0f, 0.1f, 25, 5, primarySource);
+                    SendHaptic(primaryNode, 0.1f, 0.1f);
 
                     // Log data
-                    scenario.CurrentStep.Delete(headTransform, Pos(primarySource), canvas.transform, type, elementID, mirroring);
+                    scenario.CurrentStep.Delete(headTransform, Pos(true), canvas.transform, type, elementID, mirroring);
                 }
 
             }
 
             // Secondary hand: grabbing
-            else if (grabAction.GetStateDown(secondarySource))
+            else if (grabAction.Result)
             {
                 currentAction = Action.Grab;
                 secondaryHandAppearance.OnGrabStart();
                 grid.OnTransformStart();
-                grabController.GrabStart(Pos(secondarySource), Rot(secondarySource));
+                grabController.GrabStart(Pos(false), Rot(false));
             }
 
-            else if (toggleGridStateAction.GetStateDown(secondarySource))
+            else if (toggleGridStateAction.Result)
             {
                 // Toggle grid state
                 //Debug.Log("toggle grid state");
                 grid.ToggleGridState();
             }
-            else if (toggleMirror.GetStateDown(secondarySource) && mirrorAvailable)
+            else if (toggleMirror.Result && mirrorAvailable)
             {
                 if (mirroring)
                 {
@@ -245,13 +251,13 @@ public class InputController : MonoBehaviour
                     mirrorPlane.Show();
                 }
             }
-            else if (switchSystemAction.GetStateDown(secondarySource) && mode.Equals(VRSketch.InteractionMode.FreeCreation))
+            else if (switchSystemAction.Result && mode.Equals(VRSketch.InteractionMode.FreeCreation))
             {
                 int currentSystemID = (int)this.sketchSystem;
                 int newSystemID = (currentSystemID + 2) % 4; // Switch between freehand and patch
                 OnSystemChange((SketchSystem)newSystemID, clearCanvas: false);
                 UpdateInstructions();
-                hapticAction.Execute(0f, 0.1f, 25, 5, secondarySource);
+                SendHaptic(secondaryNode, 0.1f, 0.1f);
             }
 
             // Keyboard
@@ -267,11 +273,11 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Draw))
         {
-            if (drawAction.GetAxis(primarySource) > 0.1f)
-            {
-                // Still drawing
-                Vector3 velocity = pose.GetVelocity(primarySource);
-                float pressure = drawAction.GetAxis(primarySource);
+                if (drawAction.Result > 0.1f)
+                {
+                    // Still drawing
+                    Vector3 velocity = Vector3.zero; // removed
+                    float pressure = drawAction.Result;
                 drawController.UpdateStroke(drawingPos, rot, velocity, pressure);
             }
             else
@@ -289,7 +295,7 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Grab))
         {
-            if(grabAction.GetStateUp(secondarySource))
+            if(!grabAction.Result)
             {
                 currentAction = Action.Idle;
                 secondaryHandAppearance.OnGrabEnd();
@@ -307,7 +313,7 @@ public class InputController : MonoBehaviour
 
         else if (currentAction.Equals(Action.Zoom))
         {
-            if (zoomAction.GetStateUp(primarySource))
+            if (!zoomAction.Result)
             {
                 currentAction = Action.Idle;
                 zoomInteractionAppearance.OnZoomEnd();
@@ -346,7 +352,7 @@ public class InputController : MonoBehaviour
 #endif
         }
 
-        if (!lookingAtExample && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+        if (!lookingAtExample && !studyNextAction.Result)
         {
             Debug.Log("on to the next step");
             waitingForConfirm = true;
@@ -391,7 +397,7 @@ public class InputController : MonoBehaviour
         //wait for button to be pressed (wait at least 0.5s for the break)
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && !studyNextAction.Result)
                 break;
             yield return null;
         }
@@ -422,7 +428,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && !studyNextAction.Result)
             {
                 break;
             }
@@ -456,12 +462,12 @@ public class InputController : MonoBehaviour
 
         while(true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.Result)
             {
                 confirm = true;
                 break;
             }
-            if (Time.time > lastContinueInputTime + 0.5f && drawAction.GetAxis(SteamVR_Input_Sources.Any) > 0.5f)
+            if (Time.time > lastContinueInputTime + 0.5f && drawAction.Result > 0.5f)
             {
                 confirm = false;
                 break;
@@ -501,7 +507,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.Result)
                 break;
             yield return null;
         }
@@ -529,7 +535,7 @@ public class InputController : MonoBehaviour
 
         while (true)
         {
-            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.GetStateUp(SteamVR_Input_Sources.Any))
+            if (Time.time > lastContinueInputTime + 0.5f && studyNextAction.Result)
                 break;
             yield return null;
         }
@@ -701,14 +707,14 @@ public class InputController : MonoBehaviour
     //    scenario.CurrentStep.Delete(headTransform, Pos(primarySource), canvasTransform, InteractionType.SurfaceDelete, patchID);
     //}
 
-    private Vector3 Pos(SteamVR_Input_Sources source)
+    private Vector3 Pos(bool isPrimary)
     {
-        return pose.GetLocalPosition(source);
+        return isPrimary ? primaryHandTransform.position : secondaryHandTransform.position;
     }
 
-    private Quaternion Rot(SteamVR_Input_Sources source)
+    private Quaternion Rot(bool isPrimary)
     {
-        return pose.GetLocalRotation(source);
+        return isPrimary ? primaryHandTransform.rotation : secondaryHandTransform.rotation;
     }
 
     private void ConfirmEndAction()
