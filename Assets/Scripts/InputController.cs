@@ -215,45 +215,6 @@ public class InputController : MonoBehaviour
         // Set up controller cheatsheet
         controllerType = StudyUtils.GetControllerType();
         instructionsDisplay.SetControllers(controllerType, StudyUtils.IsRightHandedConfig());
-
-        // Auto-assign hand transforms if not set in inspector
-        if (primaryHandTransform == null || secondaryHandTransform == null)
-        {
-            GameObject player = GameObject.Find("Player");
-            if (player != null)
-            {
-                if (primaryHandTransform == null)
-                {
-                    Transform primary = player.transform.Find("Controller (primary hand)");
-                    if (primary != null)
-                    {
-                        primaryHandTransform = primary;
-                        Debug.Log("Auto-assigned primary hand transform");
-                    }
-                    else
-                    {
-                        Debug.LogError("Could not find 'Controller (primary hand)' under Player!");
-                    }
-                }
-                if (secondaryHandTransform == null)
-                {
-                    Transform secondary = player.transform.Find("Controller (secondary hand)");
-                    if (secondary != null)
-                    {
-                        secondaryHandTransform = secondary;
-                        Debug.Log("Auto-assigned secondary hand transform");
-                    }
-                    else
-                    {
-                        Debug.LogError("Could not find 'Controller (secondary hand)' under Player!");
-                    }
-                }
-            }
-            else
-            {
-                Debug.LogError("Could not find Player GameObject!");
-            }
-        }
     }
 
     private void OnDisable()
@@ -315,7 +276,7 @@ public class InputController : MonoBehaviour
                 drawController.NewStroke(drawingPos);
             }
             // Right Grip: Zoom (both hands)
-            else if (rightGrip > 0.1f || leftGrip > 0.1f)
+            else if (rightGrip > 0.1f && leftGrip > 0.1f)
             {
                 currentAction = Action.Zoom;
                 primaryHandAppearance.OnZoomStart();
