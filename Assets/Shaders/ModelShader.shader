@@ -54,10 +54,12 @@
         struct Input
         {
             float opacity;
+            float2 uv_texcoord1;
+            float2 uv_texcoord2;
         };
 
 
-        void vert(inout appdata_base v, out Input o) {
+        void vert(inout appdata_full v, out Input o) {
             UNITY_INITIALIZE_OUTPUT(Input, o);
             float focus_point_distance = distance(mul(unity_ObjectToWorld, v.vertex).xyz, _FocusPoint.xyz);
             float depth;

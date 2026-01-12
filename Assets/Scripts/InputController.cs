@@ -93,10 +93,12 @@ public class InputController : MonoBehaviour
 
     // Double-press detection
     private float doublePressThreshold = 0.3f; // 300ms window for double-press
+#pragma warning disable CS0414
     private float lastAddPatchPressTime = -1f;
     private float lastToggleGridPressTime = -1f;
     private int addPatchPressCount = 0;
     private int toggleGridPressCount = 0;
+#pragma warning restore CS0414
 
     static ProfilerMarker s_InputLoopMarker = new ProfilerMarker("VRSketch.TreatInput");
 
@@ -303,13 +305,13 @@ public class InputController : MonoBehaviour
                 if (waitingForConfirm)
                 {
                     waitingForConfirm = false;
-                    scenario.CurrentStep.Next();
+                    scenario.NextStep();
                     UpdateInstructions();
                 }
                 else if (isInBreakMode)
                 {
                     isInBreakMode = false;
-                    scenario.CurrentStep.Next();
+                    scenario.NextStep();
                     UpdateInstructions();
                 }
             }
@@ -355,13 +357,13 @@ public class InputController : MonoBehaviour
                 if (waitingForConfirm)
                 {
                     waitingForConfirm = false;
-                    scenario.CurrentStep.Next();
+                    scenario.NextStep();
                     UpdateInstructions();
                 }
                 else if (isInBreakMode)
                 {
                     isInBreakMode = false;
-                    scenario.CurrentStep.Next();
+                    scenario.NextStep();
                     UpdateInstructions();
                 }
             }
