@@ -11,6 +11,10 @@ public class SceneViewBackgroundSetter
 
     private static void SetBackgroundColor(SceneView sceneView)
     {
-        sceneView.background = new Color(0.4f, 0.4f, 0.4f, 1f); // Editing grey (darker grey)
+        if (sceneView.camera != null)
+        {
+            sceneView.camera.clearFlags = CameraClearFlags.SolidColor;
+            sceneView.camera.backgroundColor = new Color(0.4f, 0.4f, 0.4f, 1f); // Editing grey (darker grey)
+        }
     }
 }
