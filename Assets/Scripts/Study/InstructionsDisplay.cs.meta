@@ -3,7 +3,17 @@ guid: bbc0586c4ff95c24f80a77dd546d5936
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - cameraTransform: {instanceID: 0}
+  - LeftHandCheatSheet: {instanceID: 0}
+  - RightHandCheatSheet: {instanceID: 0}
+  - ViveDominant: {fileID: 21300000, guid: f353ed4a4198e374498ae6e88d63d5c2, type: 3}
+  - ViveNonDominant: {fileID: 21300000, guid: 459e278f9d2486b4da84fd25d61766d4, type: 3}
+  - OculusDominant: {fileID: 21300000, guid: 8694f0c5967d7794abc521f9b1fe81b8, type: 3}
+  - OculusNonDominant: {fileID: 21300000, guid: af3dfe019c8590d488c3201b29c9e514,
+      type: 3}
+  - ValveDominant: {fileID: 21300000, guid: 7cf9b24cc1bc964418ae6eb82d5d6983, type: 3}
+  - ValveNonDominant: {fileID: 21300000, guid: 2fa352e31eb1a4d428b84bf71e940685, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
