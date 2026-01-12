@@ -1,3 +1,3 @@
 set -e
-find ./ -name "*.dll" | xargs zstd --compress -q
-find ./ -name "*.dll" | xargs rm 
+find ./ -path ./Library/Artifacts -prune -o -name "*.dll" -print | xargs zstd --compress -q
+find ./ -path ./Library/Artifacts -prune -o -name "*.dll" -print | xargs rm

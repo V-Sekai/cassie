@@ -1,2 +1,2 @@
 set -e
-find ./ -name "*.zst" | xargs zstd --uncompress --quiet
+find ./ -path ./Library/Artifacts -prune -o -name "*.zst" -print | xargs zstd --uncompress --quiet
