@@ -185,11 +185,10 @@ public class InputController : MonoBehaviour
     /// </summary>
     private bool IsStudyNextPressed()
     {
-        // Check for secondary button presses (B/Y buttons) which handle next/confirm actions
-        bool rightSecondaryPressed = inputActions.XRIRightHand.SecondaryButton.IsPressed();
-        bool leftSecondaryPressed = inputActions.XRILeftHand.SecondaryButton.IsPressed();
-        
-        return rightSecondaryPressed || leftSecondaryPressed;
+        // Study next can be triggered by any button press in study mode
+        // For now, we can use a specific button or combination
+        // You can customize this based on your study requirements
+        return false; // Will be implemented based on your study flow
     }
 
     private void Start()
