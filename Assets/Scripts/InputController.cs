@@ -139,27 +139,28 @@ public class InputController : MonoBehaviour
     }
 
     /// <summary>
-    /// Detects button press type: returns 1 for single press, 2 for double press, 0 for no action
+    /// Detects if a button was single-pressed (returns true on release if not double-pressed)
     /// </summary>
-    private int DetectPressType(bool isPressed, ref float lastPressTime, ref int pressCount)
+    private bool DetectSinglePress(bool isPressed, ref float lastPressTime, ref int pressCount)
     {
         if (isPressed)
         {
+            // Button pressed
             float timeSinceLastPress = Time.time - lastPressTime;
             
-            if (timeSinceLastPress < doublePressThreshold && pressCount == 1)
+            if (timeSinceLastPress < doublePressThreshold)
             {
-                // Double-press detected!
-                pressCount = 0; // Reset for next sequence
+                // This is a potential double-press
+                pressCount = 2;
                 lastPressTime = Time.time;
-                return 2; // Double press
+                return false; // Not a single press
             }
-            else if (pressCount == 0 || timeSinceLastPress >= doublePressThreshold)
+            else
             {
                 // First press
                 pressCount = 1;
                 lastPressTime = Time.time;
-                return 0; // Wait for potential second press
+                return false; // Wait to see if there's a second press
             }
         }
         else
@@ -169,15 +170,31 @@ public class InputController : MonoBehaviour
             {
                 // Single press confirmed (no second press within threshold)
                 pressCount = 0;
-                return 1; // Single press
+                return true;
             }
-            // If pressCount == 2, it was already handled as double press
-            if (pressCount == 2)
+            pressCount = 0;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Detects if a button was double-pressed (returns true immediately on second press)
+    /// </summary>
+    private bool DetectDoublePress(bool isPressed, ref float lastPressTime, ref int pressCount)
+    {
+        if (isPressed)
+        {
+            float timeSinceLastPress = Time.time - lastPressTime;
+            
+            if (timeSinceLastPress < doublePressThreshold && pressCount == 1)
             {
-                pressCount = 0;
+                // Double-press detected!
+                pressCount = 2;
+                lastPressTime = Time.time;
+                return true;
             }
         }
-        return 0; // No action
+        return false;
     }
 
     /// <summary>
@@ -269,47 +286,27 @@ public class InputController : MonoBehaviour
                 float handsDistance = Vector3.Distance(Pos(true), Pos(false));
                 zoomController.StartZoom(handsDistance);
             }
-            // Right A Button (Primary): Add Patch (single press) or Delete (double press)
-            if (!lookingAtExample)
+            // Right A Button (Primary): Add Patch
+            else if (!lookingAtExample && rightPrimaryButton)
             {
-                int pressTypeA = DetectPressType(rightPrimaryButton, ref lastAddPatchPressTime, ref addPatchPressCount);
-                
-                if (pressTypeA == 1) // Single press
+                Debug.Log("add patch action");
+                if (addPatchController.TryAddPatch(pos, mirroring))
                 {
-                    Debug.Log("add patch action");
-                    if (addPatchController.TryAddPatch(pos, mirroring))
-                    {
-                        SendHaptic(primaryNode, 0.1f, 0.1f);
-                    }
-                    else
-                        primaryHandAppearance.OnNoOp();
+                    SendHaptic(primaryNode, 0.1f, 0.1f);
                 }
-                else if (pressTypeA == 2) // Double press
-                {
-                    bool deleteSuccess = eraseController.TryDelete(Pos(true), out InteractionType type, out int elementID, mirror: mirroring);
-                    if (deleteSuccess)
-                    {
-                        SendHaptic(primaryNode, 0.1f, 0.1f);
-                        // Log data
-                        scenario.CurrentStep.Delete(headTransform, Pos(true), canvas.transform, type, elementID, mirroring);
-                    }
-                }
+                else
+                    primaryHandAppearance.OnNoOp();
             }
-            // Right B Button (Secondary): Next step/Confirm action
+            // Right B Button (Secondary): Delete/Erase
             else if (!lookingAtExample && rightSecondaryButton)
             {
-                // Handle next/confirm action (study mode functionality)
-                if (waitingForConfirm)
+                bool deleteSuccess = eraseController.TryDelete(Pos(true), out InteractionType type, out int elementID, mirror: mirroring);
+                if (deleteSuccess)
                 {
-                    waitingForConfirm = false;
-                    scenario.CurrentStep.Next();
-                    UpdateInstructions();
-                }
-                else if (isInBreakMode)
-                {
-                    isInBreakMode = false;
-                    scenario.CurrentStep.Next();
-                    UpdateInstructions();
+                    SendHaptic(primaryNode, 0.1f, 0.1f);
+
+                    // Log data
+                    scenario.CurrentStep.Delete(headTransform, Pos(true), canvas.transform, type, elementID, mirroring);
                 }
             }
 
@@ -322,46 +319,25 @@ public class InputController : MonoBehaviour
                 grabController.GrabStart(Pos(false), Rot(false));
             }
 
-            // Left X Button (Primary): Toggle Grid (single press) or Toggle Mirror (double press)
-            if (leftPrimaryButton)
+            // Left X Button (Primary): Toggle Grid State
+            else if (leftPrimaryButton)
             {
-                int pressTypeX = DetectPressType(leftPrimaryButton, ref lastToggleGridPressTime, ref toggleGridPressCount);
-                
-                if (pressTypeX == 1) // Single press
-                {
-                    // Toggle grid state
-                    //Debug.Log("toggle grid state");
-                    grid.ToggleGridState();
-                }
-                else if (pressTypeX == 2 && mirrorAvailable) // Double press
-                {
-                    if (mirroring)
-                    {
-                        mirroring = false;
-                        mirrorPlane.Hide();
-                    }
-                    else
-                    {
-                        mirroring = true;
-                        mirrorPlane.Show();
-                    }
-                }
+                // Toggle grid state
+                //Debug.Log("toggle grid state");
+                grid.ToggleGridState();
             }
-            // Left Y Button (Secondary): Next step/Confirm action
-            else if (leftSecondaryButton)
+            // Left Y Button (Secondary): Toggle Mirror
+            else if (leftSecondaryButton && mirrorAvailable)
             {
-                // Handle next/confirm action (study mode functionality) - duplicate of right B
-                if (waitingForConfirm)
+                if (mirroring)
                 {
-                    waitingForConfirm = false;
-                    scenario.CurrentStep.Next();
-                    UpdateInstructions();
+                    mirroring = false;
+                    mirrorPlane.Hide();
                 }
-                else if (isInBreakMode)
+                else
                 {
-                    isInBreakMode = false;
-                    scenario.CurrentStep.Next();
-                    UpdateInstructions();
+                    mirroring = true;
+                    mirrorPlane.Show();
                 }
             }
             // Left Trigger: Switch System (secondary hand)
